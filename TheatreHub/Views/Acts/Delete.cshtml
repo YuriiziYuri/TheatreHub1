@@ -1,0 +1,104 @@
+@model TheatreHub.Models.Act
+
+@{
+    ViewData["Title"] = "Видалення дії";
+
+    var hasScenes =
+        Model.Scenes.Any();
+
+    var hasRehearsals =
+        Model.Rehearsals.Any() ||
+        Model.Scenes.Any(scene =>
+            scene.Rehearsals.Any());
+
+    var cannotDelete =
+        hasScenes ||
+        hasRehearsals;
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+
+        <div class="card border-danger shadow-sm">
+            <div class="card-body p-4">
+
+                <h1 class="h3 text-danger mb-3">
+                    Видалення дії
+                </h1>
+
+                <p>
+                    Ви дійсно хочете видалити
+                    <strong>
+                        «@Model.DisplayName»
+                    </strong>?
+                </p>
+
+                <p class="text-muted">
+                    Вистава:
+                    @Model.Performance.Title
+                </p>
+
+                <dl class="row">
+                    <dt class="col-sm-4">
+                        Сцени
+                    </dt>
+                    <dd class="col-sm-8">
+                        @Model.Scenes.Count
+                    </dd>
+
+                    <dt class="col-sm-4">
+                        Репетиції
+                    </dt>
+                    <dd class="col-sm-8">
+                        @(Model.Rehearsals.Count +
+                          Model.Scenes.Sum(scene =>
+                              scene.Rehearsals.Count))
+                    </dd>
+                </dl>
+
+                @if (cannotDelete)
+                {
+                    <div class="alert alert-warning">
+                        Цю дію не можна видалити, бо вона має сцени
+                        або пов’язані репетиції. Спочатку видаліть
+                        або перенесіть ці дані.
+                    </div>
+
+                    <a asp-action="Details"
+                       asp-route-id="@Model.Id"
+                       class="btn btn-outline-primary">
+                        До дії
+                    </a>
+
+                    <a asp-action="Index"
+                       asp-route-performanceId="@Model.PerformanceId"
+                       class="btn btn-outline-secondary">
+                        До структури
+                    </a>
+                }
+                else
+                {
+                    <form asp-action="Delete"
+                          method="post">
+
+                        <input type="hidden"
+                               asp-for="Id" />
+
+                        <button type="submit"
+                                class="btn btn-danger">
+                            Видалити
+                        </button>
+
+                        <a asp-action="Index"
+                           asp-route-performanceId="@Model.PerformanceId"
+                           class="btn btn-outline-secondary">
+                            Скасувати
+                        </a>
+                    </form>
+                }
+
+            </div>
+        </div>
+
+    </div>
+</div>

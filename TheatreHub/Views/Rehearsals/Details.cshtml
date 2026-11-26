@@ -1,0 +1,271 @@
+﻿@model TheatreHub.Models.Rehearsal
+
+@using Microsoft.AspNetCore.Authorization
+@using TheatreHub.Constants
+
+@inject IAuthorizationService AuthorizationService
+
+@{
+    var canManageRehearsals =
+        (await AuthorizationService.AuthorizeAsync(
+            User,
+            AppPolicies.CanManageRehearsals)).Succeeded;
+
+    ViewData["Title"] = "Деталі репетиції";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+
+                <div class="d-flex flex-wrap
+                            justify-content-between
+                            align-items-start
+                            gap-3
+                            mb-4">
+
+                    <div>
+                        <h1 class="h3 mb-1">
+                            Деталі репетиції
+                        </h1>
+
+                        <p class="text-muted mb-0">
+                            @Model.Performance.Title
+                        </p>
+                    </div>
+
+                    <span class="badge text-bg-primary">
+                        @Html.DisplayFor(model => model.Status)
+                    </span>
+
+                </div>
+
+                <dl class="row mb-4">
+
+                    <dt class="col-sm-4">
+                        Вистава
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        <a asp-controller="Performances"
+                           asp-action="Details"
+                           asp-route-id="@Model.PerformanceId"
+                           class="text-decoration-none">
+
+                            @Model.Performance.Title
+
+                        </a>
+                    </dd>
+
+                    <dt class="col-sm-4">
+                        Об’єкт репетиції
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        @if (Model.Scene != null)
+                        {
+                            <div>
+                                <strong>
+                                    Сцена @Model.Scene.Number.
+                                    @Model.Scene.Title
+                                </strong>
+                            </div>
+
+                            <div class="small text-muted">
+                                @Model.Scene.Act.DisplayName
+                            </div>
+                        }
+                        else if (Model.Act != null)
+                        {
+                            <strong>
+                                @Model.Act.DisplayName
+                            </strong>
+                        }
+                        else
+                        {
+                            <span>
+                                Уся вистава
+                            </span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">
+                        Початок
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        @Model.StartDateTime.ToString("dd.MM.yyyy HH:mm")
+                    </dd>
+
+                    <dt class="col-sm-4">
+                        Завершення
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        @Model.EndDateTime.ToString("dd.MM.yyyy HH:mm")
+                    </dd>
+
+                    <dt class="col-sm-4">
+                        Тривалість
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        @{
+                            var duration =
+                            Model.EndDateTime -
+                            Model.StartDateTime;
+                        }
+
+                        @if (duration.TotalMinutes >= 60)
+                        {
+                            <span>
+                                @((int)duration.TotalHours) год
+                                @duration.Minutes хв
+                            </span>
+                        }
+                        else
+                        {
+                            <span>
+                                @((int)duration.TotalMinutes) хв
+                            </span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">
+                        Зал
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        <div class="fw-semibold">
+                            <a asp-controller="Halls"
+                               asp-action="Details"
+                               asp-route-id="@Model.HallId"
+                               class="text-decoration-none">
+
+                                @Model.Hall.Name
+
+                            </a>
+                        </div>
+
+                        <div class="small text-muted">
+                            @Model.Hall.Venue.Name —
+                            @Model.Hall.Venue.Address
+                        </div>
+                    </dd>
+
+                    <dt class="col-sm-4">
+                        Статус
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        @Html.DisplayFor(model => model.Status)
+                    </dd>
+
+                    <dt class="col-sm-4">
+                        Примітки
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        @if (string.IsNullOrWhiteSpace(Model.Notes))
+                        {
+                            <span class="text-muted">
+                                Приміток немає.
+                            </span>
+                        }
+                        else
+                        {
+                            <span>
+                                @Model.Notes
+                            </span>
+                        }
+                    </dd>
+
+                </dl>
+
+                <hr />
+
+                <div class="d-flex flex-wrap
+                            justify-content-between
+                            align-items-center
+                            gap-2
+                            mb-3">
+
+                    <h2 class="h5 mb-0">
+                        Учасники репетиції
+                    </h2>
+
+                    <span class="badge text-bg-secondary">
+                        @Model.Participants.Count
+                    </span>
+
+                </div>
+
+                @if (!Model.Participants.Any())
+                {
+                    <div class="alert alert-info">
+                        Учасників не додано.
+                    </div>
+                }
+                else
+                {
+                    <div class="list-group mb-4">
+
+                        @foreach (var participant in Model.Participants
+                                            .OrderBy(item => item.Actor.LastName)
+                                            .ThenBy(item => item.Actor.FirstName))
+                        {
+                            <div class="list-group-item">
+                                <div class="fw-semibold">
+                                    @participant.Actor.FullName
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(
+                                                        participant.Actor.Email))
+                                {
+                                    <div class="small text-muted">
+                                        @participant.Actor.Email
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                    </div>
+                }
+
+                <div class="d-flex flex-wrap gap-2">
+
+                    @if (canManageRehearsals)
+                    {
+                        <a asp-action="Edit"
+                           asp-route-id="@Model.Id"
+                           class="btn btn-primary">
+                            Редагувати
+                        </a>
+
+                        <a asp-action="Attendance"
+                           asp-route-id="@Model.Id"
+                           class="btn btn-outline-success">
+                            Відвідування
+                        </a>
+
+                        <a asp-action="Delete"
+                           asp-route-id="@Model.Id"
+                           class="btn btn-outline-danger">
+                            Видалити
+                        </a>
+                    }
+
+                    <a asp-action="Index"
+                       class="btn btn-outline-secondary">
+                        До списку
+                    </a>
+
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>

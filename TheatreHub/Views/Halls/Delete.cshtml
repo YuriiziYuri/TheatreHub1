@@ -1,0 +1,101 @@
+@model TheatreHub.Models.Hall
+
+@{
+    ViewData["Title"] = "Видалення залу";
+
+    var rehearsalsCount =
+        Model.Rehearsals.Count;
+
+    var performanceShowsCount =
+        ViewBag.PerformanceShowsCount is int count
+            ? count
+            : 0;
+
+    var hasDependencies =
+        rehearsalsCount > 0 ||
+        performanceShowsCount > 0;
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+
+        <div class="card border-danger shadow-sm">
+            <div class="card-body p-4">
+
+                <h1 class="h3 text-danger mb-3">
+                    Видалення залу
+                </h1>
+
+                <p>
+                    Ви дійсно хочете видалити зал
+                    <strong>«@Model.Name»</strong>?
+                </p>
+
+                <dl class="row">
+                    <dt class="col-sm-4">Майданчик</dt>
+                    <dd class="col-sm-8">
+                        @Model.Venue.Name
+                    </dd>
+
+                    <dt class="col-sm-4">Місткість</dt>
+                    <dd class="col-sm-8">
+                        @Model.Capacity місць
+                    </dd>
+
+                    <dt class="col-sm-4">Репетиції</dt>
+                    <dd class="col-sm-8">
+                        @Model.Rehearsals.Count
+                    </dd>
+
+                    <dt class="col-sm-4">Покази</dt>
+                    <dd class="col-sm-8">
+                        @performanceShowsCount
+                    </dd>
+
+                </dl>
+
+                @if (hasDependencies)
+                {
+                    <div class="alert alert-warning">
+                        Зал не можна видалити, оскільки з ним пов’язані
+                        репетиції або покази вистав.
+
+                        Спочатку перенесіть чи видаліть ці записи.
+                        Замість видалення зал також можна деактивувати.
+                    </div>
+
+                    <a asp-action="Details"
+                       asp-route-id="@Model.Id"
+                       class="btn btn-outline-primary">
+                        До залу
+                    </a>
+
+                    <a asp-action="Index"
+                       asp-route-venueId="@Model.VenueId"
+                       class="btn btn-outline-secondary">
+                        До списку
+                    </a>
+                }
+                else
+                {
+                    <form asp-action="Delete" method="post">
+                        <input type="hidden" asp-for="Id" />
+
+                        <button type="submit"
+                                class="btn btn-danger">
+                            Видалити
+                        </button>
+
+                        <a asp-action="Index"
+                           asp-route-venueId="@Model.VenueId"
+                           class="btn btn-outline-secondary">
+                            Скасувати
+                        </a>
+                    </form>
+                }
+
+            </div>
+        </div>
+
+    </div>
+</div>

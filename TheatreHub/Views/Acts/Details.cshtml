@@ -1,0 +1,503 @@
+@model TheatreHub.Models.Act
+@using Microsoft.AspNetCore.Authorization
+@using TheatreHub.Constants
+@using TheatreHub.Models
+@using TheatreHub.Models.Enums
+@using TheatreHub.ViewModels
+
+@inject IAuthorizationService AuthorizationService
+
+@{
+    ViewData["Title"] = "Деталі дії";
+
+    var canManagePerformances =
+        (await AuthorizationService.AuthorizeAsync(
+            User,
+            AppPolicies.CanManagePerformances)).Succeeded;
+
+    var canManageTasks =
+        (await AuthorizationService.AuthorizeAsync(
+            User,
+            AppPolicies.CanManageTasks)).Succeeded;
+
+    var canManageRehearsals =
+        (await AuthorizationService.AuthorizeAsync(
+            User,
+            AppPolicies.CanManageRehearsals)).Succeeded;
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["ErrorMessage"]
+    </div>
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+
+        <div class="d-flex flex-wrap
+                    justify-content-between
+                    align-items-start
+                    gap-3
+                    mb-4">
+
+            <div>
+                <h1 class="h3 mb-1">
+                    @Model.DisplayName
+                </h1>
+
+                <p class="text-muted mb-0">
+                    @Model.Performance.Title
+                </p>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+
+                @if (canManagePerformances)
+                {
+                    <a asp-action="Edit"
+                       asp-route-id="@Model.Id"
+                       class="btn btn-primary">
+                        Редагувати
+                    </a>
+                }
+
+                <a asp-action="Index"
+                   asp-route-performanceId="@Model.PerformanceId"
+                   class="btn btn-outline-secondary">
+                    До структури
+                </a>
+            </div>
+        </div>
+
+        <dl class="row">
+            <dt class="col-sm-3">Номер</dt>
+            <dd class="col-sm-9">@Model.Number</dd>
+
+            <dt class="col-sm-3">Порядок</dt>
+            <dd class="col-sm-9">@Model.Position</dd>
+
+            <dt class="col-sm-3">Опис</dt>
+            <dd class="col-sm-9">
+                @(Model.Description ?? "Опис відсутній")
+            </dd>
+        </dl>
+
+        <hr />
+
+        <div class="d-flex flex-wrap
+                    justify-content-between
+                    align-items-center
+                    gap-2
+                    mb-3">
+
+            <h2 class="h4 mb-0">
+                Сцени
+            </h2>
+
+            @if (canManagePerformances)
+            {
+                <a asp-controller="Scenes"
+                   asp-action="Create"
+                   asp-route-actId="@Model.Id"
+                   class="btn btn-sm btn-primary">
+                    Додати сцену
+                </a>
+            }
+        </div>
+
+        @if (!Model.Scenes.Any())
+        {
+            <div class="alert alert-info mb-0">
+                У цій дії ще немає сцен.
+            </div>
+        }
+        else
+        {
+            <div class="list-group">
+                @foreach (var scene in Model.Scenes)
+                {
+                    <div class="list-group-item">
+                        <div class="d-flex
+                                                    justify-content-between
+                                                    align-items-start
+                                                    gap-3">
+
+                            <div>
+                                <strong>
+                                    Сцена @scene.Number.
+                                    @scene.Title
+                                </strong>
+
+                                <div class="small text-muted">
+                                    Тривалість:
+                                    @scene.DurationMinutes хв
+                                    · Позиція: @scene.Position
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-2">
+                                <a asp-controller="Scenes"
+                                   asp-action="Details"
+                                   asp-route-id="@scene.Id"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Деталі
+                                </a>
+
+                                @if (canManagePerformances)
+                                {
+                                    <a asp-controller="Scenes"
+                                       asp-action="Edit"
+                                       asp-route-id="@scene.Id"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        Редагувати
+                                    </a>
+
+                                    <a asp-controller="Scenes"
+                                       asp-action="Delete"
+                                       asp-route-id="@scene.Id"
+                                       class="btn btn-sm btn-outline-danger">
+                                        Видалити
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        @{
+            var tasks = ViewBag.Tasks as List<TheatreTask> ?? [];
+
+            string GetTaskStatusText(TheatreTaskStatus status)
+            {
+                return status switch
+                {
+                    TheatreTaskStatus.Planned => "Заплановано",
+                    TheatreTaskStatus.InProgress => "У роботі",
+                    TheatreTaskStatus.Done => "Виконано",
+                    TheatreTaskStatus.Cancelled => "Скасовано",
+                    _ => status.ToString()
+                };
+            }
+
+            string GetTaskPriorityText(TheatreTaskPriority priority)
+            {
+                return priority switch
+                {
+                    TheatreTaskPriority.Low => "Низький",
+                    TheatreTaskPriority.Normal => "Звичайний",
+                    TheatreTaskPriority.High => "Високий",
+                    TheatreTaskPriority.Critical => "Критичний",
+                    _ => priority.ToString()
+                };
+            }
+
+            string GetTaskStatusClass(TheatreTaskStatus status)
+            {
+                return status switch
+                {
+                    TheatreTaskStatus.Planned => "text-bg-secondary",
+                    TheatreTaskStatus.InProgress => "text-bg-primary",
+                    TheatreTaskStatus.Done => "text-bg-success",
+                    TheatreTaskStatus.Cancelled => "text-bg-dark",
+                    _ => "text-bg-secondary"
+                };
+            }
+
+            string GetTaskPriorityClass(TheatreTaskPriority priority)
+            {
+                return priority switch
+                {
+                    TheatreTaskPriority.Low => "text-bg-light",
+                    TheatreTaskPriority.Normal => "text-bg-secondary",
+                    TheatreTaskPriority.High => "text-bg-warning",
+                    TheatreTaskPriority.Critical => "text-bg-danger",
+                    _ => "text-bg-secondary"
+                };
+            }
+        }
+
+        @await Html.PartialAsync(
+        "_ProductionItemsBlock",
+                new ProductionItemsBlockViewModel
+                {
+                    Title = "Реквізит / костюми / грим дії",
+                    Description = "Постановочні елементи, прив’язані до цієї дії",
+                    ActId = Model.Id,
+                    Items =
+                ViewBag.ProductionItems as List<ProductionItem>
+                ?? new List<ProductionItem>()
+                })
+
+        <hr />
+
+        <div class="d-flex flex-wrap
+            justify-content-between
+            align-items-center
+            gap-3
+            mb-3">
+
+            <div>
+                <h2 class="h4 mb-1">
+                    Завдання дії
+                </h2>
+
+                <p class="text-muted mb-0">
+                    Завдання, прив’язані до цієї дії
+                </p>
+            </div>
+
+            @if (canManageTasks)
+            {
+                <a asp-controller="TheatreTasks"
+                   asp-action="Create"
+                   asp-route-actId="@Model.Id"
+                   class="btn btn-outline-primary">
+                    Створити завдання дії
+                </a>
+            }
+
+        </div>
+
+        @if (!tasks.Any())
+        {
+            <div class="alert alert-info">
+                Для цієї дії ще немає завдань.
+            </div>
+        }
+        else
+        {
+            <div class="list-group mb-4">
+
+                @foreach (var task in tasks)
+                {
+                    <div class="list-group-item">
+
+                        <div class="d-flex flex-wrap
+                                            justify-content-between
+                                            align-items-start
+                                            gap-3">
+
+                            <div>
+                                <strong>
+                                    @task.Title
+                                </strong>
+
+                                <div class="small text-muted">
+                                    @if (task.Scene != null)
+                                    {
+                                        <span>
+                                            Сцена @task.Scene.Number. @task.Scene.Title
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span>
+                                            Уся дія
+                                        </span>
+                                    }
+                            </div>
+
+                            <div class="small text-muted">
+                                Відповідальний:
+                                @(string.IsNullOrWhiteSpace(task.ResponsibleName)
+                                                            ? "не вказано"
+                                                            : task.ResponsibleName)
+                                                                               </div>
+
+                            <div class="small text-muted">
+                                Дедлайн:
+                                @(task.Deadline.HasValue
+                                                            ? task.Deadline.Value.ToString("dd.MM.yyyy HH:mm")
+                                                            : "не вказано")
+                        </div>
+                    </div>
+
+                            <div class="text-end">
+
+                                <div class="mb-2">
+                                    <span class="badge @GetTaskStatusClass(task.Status)">
+                                        @GetTaskStatusText(task.Status)
+                                    </span>
+
+                                    <span class="badge @GetTaskPriorityClass(task.Priority)">
+                                        @GetTaskPriorityText(task.Priority)
+                                    </span>
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-2 justify-content-end">
+
+                                    <a asp-controller="TheatreTasks"
+                                       asp-action="Details"
+                                       asp-route-id="@task.Id"
+                                       class="btn btn-sm btn-outline-primary">
+                                        Деталі
+                                    </a>
+
+                            @if (canManageTasks && task.Status != TheatreTaskStatus.Done)
+                                    {
+                                        <form asp-controller="TheatreTasks"
+                                              asp-action="ChangeStatus"
+                                              method="post">
+                                            <input type="hidden"
+                                                   name="id"
+                                                   value="@task.Id" />
+
+                                            <input type="hidden"
+                                                   name="status"
+                                                   value="@TheatreTaskStatus.Done" />
+
+                                            <input type="hidden"
+                                                   name="returnUrl"
+                                                   value="@Context.Request.Path@Context.Request.QueryString" />
+
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-outline-success">
+                                                Виконано
+                                            </button>
+                                        </form>
+                                    }
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                }
+
+            </div>
+        }
+
+        <hr />
+
+        <div class="d-flex flex-wrap
+            justify-content-between
+            align-items-center
+            gap-3
+            mb-3">
+
+            <div>
+                <h2 class="h4 mb-1">
+                    Репетиції дії
+                </h2>
+
+                <p class="text-muted mb-0">
+                    Репетиції, прив’язані до цієї дії або її сцен
+                </p>
+            </div>
+
+            @if (canManageRehearsals)
+            {
+                <a asp-controller="Rehearsals"
+                   asp-action="Create"
+                   asp-route-actId="@Model.Id"
+                   class="btn btn-outline-success">
+                    Створити репетицію дії
+                </a>
+            }
+
+        </div>
+
+        @if (!Model.Rehearsals.Any())
+        {
+            <div class="alert alert-info">
+                Для цієї дії ще немає репетицій.
+            </div>
+        }
+        else
+        {
+            <div class="list-group mb-4">
+
+                @foreach (var rehearsal in Model.Rehearsals
+                            .OrderBy(item => item.StartDateTime))
+                {
+                    <div class="list-group-item">
+
+                        <div class="d-flex flex-wrap
+                                            justify-content-between
+                                            align-items-start
+                                            gap-3">
+
+                            <div>
+                                <strong>
+                                    @rehearsal.StartDateTime.ToString("dd.MM.yyyy HH:mm")
+                                    —
+                                    @rehearsal.EndDateTime.ToString("HH:mm")
+                                </strong>
+
+                                <div class="small text-muted">
+                                    @if (rehearsal.Scene != null)
+                                    {
+                                        <span>
+                                            Сцена @rehearsal.Scene.Number.
+                                            @rehearsal.Scene.Title
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span>
+                                            Уся дія
+                                        </span>
+                                    }
+                                </div>
+
+                                <div class="small text-muted">
+                                    @rehearsal.Hall.Venue.Name —
+                                    @rehearsal.Hall.Name
+                                </div>
+
+                                <div class="small text-muted">
+                                    Учасників: @rehearsal.Participants.Count
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-2">
+
+                                <a asp-controller="Rehearsals"
+                                   asp-action="Details"
+                                   asp-route-id="@rehearsal.Id"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Деталі
+                                </a>
+
+                                @if (canManageRehearsals)
+                                {
+                                    <a asp-controller="Rehearsals"
+                                       asp-action="Attendance"
+                                       asp-route-id="@rehearsal.Id"
+                                       class="btn btn-sm btn-outline-success">
+                                        Відвідування
+                                    </a>
+
+                                    <a asp-controller="Rehearsals"
+                                       asp-action="Edit"
+                                       asp-route-id="@rehearsal.Id"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        Редагувати
+                                    </a>
+                                }
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                }
+
+            </div>
+        }
+
+    </div>
+</div>
